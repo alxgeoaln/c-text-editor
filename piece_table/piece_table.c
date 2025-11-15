@@ -1,7 +1,8 @@
-#include <stdlib.h>;
-#include <string.h>;
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
-#include "piece_table.h";
+#include "piece_table.h"
 
 piece_table_t *create_piece_table()
 {
@@ -19,7 +20,7 @@ piece_table_t *create_piece_table()
         return NULL;
     }
 
-    add_buffer->capacity = 0;
+    add_buffer->capacity = 1;
     add_buffer->length = 0;
     add_buffer->data = strdup("");
 
@@ -27,6 +28,7 @@ piece_table_t *create_piece_table()
     {
         free(add_buffer);
         free(piece_table);
+        return NULL;
     }
 
     piece_table->piece = NULL;
@@ -69,7 +71,6 @@ void create_original_buffer(piece_table_t *piece_table, char *value)
 
     if (original_buffer->data == NULL)
     {
-        free(original_buffer->data);
         free(original_buffer);
         return;
     }
@@ -115,7 +116,7 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value, size_t index)
 
     while (curr && pos + curr->length <= index)
     {
-        pos = curr->length;
+        pos += curr->length;
         prev = curr;
         curr = curr->next;
     }
@@ -123,27 +124,49 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value, size_t index)
     if (curr && pos < index)
     {
         // in case the new char is in middle of piece
-        size_t curr_length = curr->length;
-        size_t second_piece_length = curr_length - index;
-        size_t first_piece_length = curr_length - second_piece_length;
+        size_t split_offset = index - pos;
+        size_t first_len = split_offset;
+        size_t second_len = curr->length - split_offset;
 
-        piece_t *first_piece = create_piece(curr->source, first_piece, curr->offset);
-        piece_t *second_piece = create_piece(curr->source, second_piece, first_piece_length + length);
+        // printf("first len->%lu\n", first_len);
+        // printf("second len->%lu\n", second_len);
 
-        second_piece = curr->next;
-        add_piece->next = second_piece;
+        // printf("first offset->%lu\n", curr->offset);
+        // printf("second offset->%lu\n", curr->offset + first_len);
+
+        piece_t *first_piece = create_piece(curr->source, first_len, curr->offset);
+        piece_t *second_piece = create_piece(curr->source, second_len, curr->offset + first_len);
+
+        if (!first_piece || !second_piece)
+        {
+            free(first_piece);
+            free(second_piece);
+            free(add_piece);
+            return;
+        }
+
         first_piece->next = add_piece;
+        add_piece->next = second_piece;
+        second_piece->next = curr->next;
+
         if (prev)
         {
             prev->next = first_piece;
         }
+        else
+        {
+            piece_table->piece = first_piece;
+        }
+
+        free(curr);
     }
     else
     {
         add_piece->next = curr;
-        // in case if its in between pieces
-        if(prev) {
+        if (prev) {
             prev->next = add_piece;
+        } else {
+            piece_table->piece = add_piece;
         }
     }
 }
