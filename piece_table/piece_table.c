@@ -153,4 +153,50 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
   }
 }
 
-text_buffer_t get_text_from_piece_table(piece_table_t piece_table) {}
+void get_text_from_piece_table(piece_table_t *piece_table) {
+  size_t new_text_length = 0;
+
+  piece_t *current = piece_table->piece;
+
+  while (current) {
+    new_text_length += current->length;
+    current = current->next;
+  }
+
+  text_buffer_t *text = malloc(sizeof(text_buffer_t));
+  if (text == NULL) {
+    return;
+  }
+
+  char *data = malloc(sizeof(char) * new_text_length + 1);
+  if (data == NULL) {
+    return;
+  }
+
+  free(current);
+
+  piece_t *curr = piece_table->piece;
+
+  size_t acc = 0;
+  while (curr) {
+    size_t start = curr->offset;
+    size_t end = curr->offset + curr->length;
+    size_t length = end - start;
+
+    if (curr->source == ORIGINAL) {
+      memcpy(data + acc, piece_table->original_buffer->data + start, length);
+
+    } else {
+      memcpy(data + acc, piece_table->add_buffer->data + start, length);
+    }
+
+    acc += length;
+    curr = curr->next;
+  }
+
+  free(curr);
+
+  printf("Data: '%s'\n", data);
+
+  return;
+}

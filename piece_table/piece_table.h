@@ -24,4 +24,4 @@ piece_t *create_piece(source_t source, size_t length, size_t offset);
 void create_original_buffer(piece_table_t *piece_table, char *value);
 void insert_to_add_buffer(piece_table_t *piece_table, char *value,
                           size_t offset);
-text_buffer_t get_text_from_piece_table(piece_table_t piece_table);
+void get_text_from_piece_table(piece_table_t *piece_table);
