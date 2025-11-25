@@ -25,3 +25,6 @@ void create_original_buffer(piece_table_t *piece_table, char *value);
 void insert_to_add_buffer(piece_table_t *piece_table, char *value,
                           size_t offset);
 void get_text_from_piece_table(piece_table_t *piece_table);
+void delete(piece_table_t *pice_table, size_t start_index, size_t length);
+
+void print_piece(piece_t *piece);

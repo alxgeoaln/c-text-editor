@@ -12,6 +12,35 @@ int main() {
     insert_to_add_buffer(piece_table, " ", 15);
     insert_to_add_buffer(piece_table, "test", 20);
 
+    // delete hello
+    // delete(piece_table, 0, 5);
+
+    // delete ,
+    // delete(piece_table, 5, 1);
+
+    // delete H
+    // delete(piece_table, 0, 1);
+
+    // delete E
+    // delete(piece_table, 1, 1);
+
+    // delete ll
+    // delete(piece_table, 2, 2);
+
+    // delete lo
+    // delete(piece_table, 4, 1);
+
+    // delete W
+    // delete(piece_table, 7, 1);
+
+    // delete ld
+    // delete(piece_table, 10, 2);
+
+    // delete o,
+    // delete(piece_table, 4, 2);
+
+    delete(piece_table, 5, 13);
+
     get_text_from_piece_table(piece_table);
 
     //  printf("add_buffer: data=\"%s\", length=%lu, capacity=%lu\n",
