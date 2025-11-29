@@ -147,7 +147,6 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
   }
 }
 
-
 void get_text_from_piece_table(piece_table_t *piece_table) {
   size_t new_text_length = 0;
 
@@ -206,7 +205,7 @@ void delete(piece_table_t *piece_table, size_t start_index,
     size_t delete_end = start_index + delete_length;
 
     if (piece_end > start_index && pos < delete_end) {
-      
+
       // Delete entire piece
       if (start_index <= pos && delete_end >= piece_end) {
         if (prev == NULL) {
@@ -216,13 +215,13 @@ void delete(piece_table_t *piece_table, size_t start_index,
         }
 
         delete_length -= (piece_end - pos);
-        
+
         piece_t *temp = curr;
         curr = curr->next;
         free(temp);
-        continue;  
+        continue;
 
-      // Delete within/partial piece
+        // Delete within/partial piece
       } else {
         size_t local_delete_start = (start_index > pos) ? start_index - pos : 0;
         size_t local_delete_end_in_piece = local_delete_start + delete_length;
@@ -231,7 +230,8 @@ void delete(piece_table_t *piece_table, size_t start_index,
           local_delete_end_in_piece = curr->length;
         }
 
-        size_t actually_deleted = local_delete_end_in_piece - local_delete_start;
+        size_t actually_deleted =
+            local_delete_end_in_piece - local_delete_start;
         delete_length -= actually_deleted;
 
         size_t before_length = local_delete_start;
@@ -287,17 +287,17 @@ void delete(piece_table_t *piece_table, size_t start_index,
           } else {
             piece_table->piece = curr->next;
           }
-          last_new_piece = prev;  
+          last_new_piece = prev;
         }
 
         piece_t *temp = curr;
         piece_t *next = curr->next;
         free(temp);
-        
+
         // Update for next iteration
         prev = last_new_piece;
         curr = next;
-        
+
         // Recalculate pos by traversing from start
         pos = 0;
         piece_t *p = piece_table->piece;
@@ -305,7 +305,7 @@ void delete(piece_table_t *piece_table, size_t start_index,
           pos += p->length;
           p = p->next;
         }
-        
+
         continue;
       }
     }
@@ -314,6 +314,151 @@ void delete(piece_table_t *piece_table, size_t start_index,
     pos += curr->length;
     curr = curr->next;
   }
+}
+
+char get_char_at(piece_table_t *piece_table, size_t index) {
+  piece_t *curr = piece_table->piece;
+  size_t pos = 0;
+
+  while (curr && pos + curr->length <= index) {
+    pos += curr->length;
+    curr = curr->next;
+  }
+
+  if (curr == NULL) {
+    printf("Index not in range\n");
+    exit(1);
+  }
+
+  if (curr->source == ADD) {
+    return piece_table->add_buffer->data[index - pos + curr->offset];
+  } else {
+    return piece_table->original_buffer->data[index - pos + curr->offset];
+  }
+}
+
+void get_text_range(piece_table_t *piece_table, size_t start_index,
+                    size_t end_index) {
+
+  if (start_index > end_index) {
+    return;
+  }
+  
+  piece_t *curr = piece_table->piece;
+  size_t pos = 0;
+
+  size_t length = end_index - start_index;
+
+  text_buffer_t *text = malloc(sizeof(text_buffer_t));
+  if (text == NULL) {
+    return;
+  }
+
+  char *data = malloc(sizeof(char) * length + 1);
+  if (data == NULL) {
+    return;
+  }
+
+  size_t multi_piece_offset = 0;
+  size_t multi_piece_len = 0;
+  int is_first_piece = 1;
+  while (curr) {
+    size_t start = curr->offset;
+    if (pos + curr->length > start_index && pos < end_index) {
+      // print_piece(curr);
+
+      // within a piece
+      if (length <= curr->length) {
+        size_t offset = 0;
+        if (pos < start_index) {
+          offset = start_index - pos;
+        }
+
+        if (curr->source == ORIGINAL) {
+          memcpy(data, piece_table->original_buffer->data + start + offset,
+                 length);
+        } else {
+          memcpy(data, piece_table->add_buffer->data + start + offset,
+                 length + 1);
+        }
+      } else {
+        // multiple piece
+
+        // first piece -> shift offset if needed
+        if (is_first_piece) {
+          if (pos < start_index) {
+            multi_piece_offset = start_index - pos;
+          }
+          if (curr->source == ORIGINAL) {
+            memcpy(data,
+                   piece_table->original_buffer->data + start +
+                       multi_piece_offset,
+                   curr->length - multi_piece_offset);
+          } else {
+            memcpy(data,
+                   piece_table->add_buffer->data + start + multi_piece_offset,
+                   curr->length - multi_piece_offset);
+          }
+
+          multi_piece_len = curr->length - multi_piece_offset;
+          is_first_piece = 0;
+          // in between piece -> copy the whole piece
+        } else if (pos + curr->length <= end_index) {
+          if (curr->source == ORIGINAL) {
+            memcpy(data + multi_piece_len,
+                   piece_table->original_buffer->data + start, curr->length);
+          } else {
+            memcpy(data + multi_piece_len,
+                   piece_table->add_buffer->data + start, curr->length);
+          }
+          multi_piece_len += curr->length;
+        } else {
+          if (curr->source == ORIGINAL) {
+            memcpy(data + multi_piece_len,
+                   piece_table->original_buffer->data + start,
+                   end_index - pos + 1);
+          } else {
+            memcpy(data + multi_piece_len,
+                   piece_table->add_buffer->data + start, end_index - pos + 1);
+          }
+        }
+      }
+    }
+
+    pos += curr->length;
+    curr = curr->next;
+  }
+
+  printf("Data from i to i: '%s'\n", data);
+}
+
+void destroy_piece_table(piece_table_t *piece_table) {
+  if (piece_table == NULL) {
+    return;
+  }
+
+  // free pieces
+  piece_t *curr = piece_table->piece;
+
+  while (curr) {
+    piece_t *temp = curr->next;
+    free(curr);
+    curr = temp;
+  }
+
+  // free add buffer
+  if (piece_table->add_buffer) {
+    free(piece_table->add_buffer->data);
+    free(piece_table->add_buffer);
+  }
+
+  // free original buffer
+  if (piece_table->original_buffer) {
+    free(piece_table->original_buffer->data);
+    free(piece_table->original_buffer);
+  }
+
+  free(piece_table);
 }
 
 void print_piece(piece_t *piece) {
@@ -325,4 +470,20 @@ void print_piece(piece_t *piece) {
   printf("Piece { source: %s, offset: %zu, length: %zu, next: %p }\n",
          piece->source == ORIGINAL ? "ORIGINAL" : "ADD", piece->offset,
          piece->length, (void *)piece->next);
+}
+
+void print_all_pieces(piece_table_t *piece_table) {
+  if (piece_table == NULL) {
+    printf("Piece table: NULL\n");
+    return;
+  }
+
+  piece_t *curr = piece_table->piece;
+
+  printf("--------------- \n");
+  while (curr) {
+    print_piece(curr);
+    curr = curr->next;
+  }
+  printf("--------------- \n");
 }
