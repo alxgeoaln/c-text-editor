@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../piece_table/piece_table.h"
 #include "../ghlyph_cache/ghlyph_cache.h"
+#include "../piece_table/piece_table.h"
 #include "window.h"
 
 #define WINDOW_TITLE "Text editor"
@@ -26,16 +26,13 @@ int window_init(piece_table_t *piece_table) {
   }
 
   // Handle font
-  TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf", 50);
+  TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf", 40);
   if (!font) {
     printf("TTF_OpenFont Error: %s\n", TTF_GetError());
     window_cleanup(&window, EXIT_FAILURE);
   }
 
   int char_height = TTF_FontHeight(font);
-
-  int char_width;
-  TTF_GlyphMetrics(font, 'M', NULL, NULL, NULL, NULL, &char_width);
 
   // Initialize glyph cache
   glyph_cache_t glyph_cache;
@@ -45,35 +42,78 @@ int window_init(piece_table_t *piece_table) {
     window_cleanup(&window, EXIT_FAILURE);
   }
 
+  printf("char_width: %d\n", glyph_cache.char_width);
+  printf("char_height: %d\n", char_height);
   // Calculate grid dimensions
-  int cols = SCREEN_WIDTH / glyph_cache.char_width;
-  int rows = SCREEN_HEIGHT / glyph_cache.char_height;
+  int cols = SCREEN_WIDTH / glyph_cache.char_width * 2;
+  int rows = SCREEN_HEIGHT / char_height;
+
+  // Use the tool to find the actual dimensions being used
+  int actual_screen_w, actual_screen_h;
+  SDL_GetWindowSize(window.window, &actual_screen_w, &actual_screen_h);
+  printf("Actual screen: %d x %d\n", actual_screen_w, actual_screen_h);
   printf("Grid: %d columns x %d rows\n", cols, rows);
 
-  // Set background color to white so you can see it
-  SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
+  // Set background color to white so you can see it 
   SDL_RenderClear(window.renderer);
   SDL_RenderPresent(window.renderer);
 
   // Event loop - keep window open until user closes it
   bool running = true;
   SDL_Event event;
+  SDL_StartTextInput();
+
+  size_t index = 0;
+  Position position = index_to_row_col(piece_table, index);
 
   while (running) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         running = false;
       }
-      // ESC key to quit
+
       if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
         running = false;
       }
+
+      if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKSPACE) {
+        delete(piece_table, index - 1, 1);
+        if(index > 0) {
+          index -= 1;
+          position = index_to_row_col(piece_table, index);
+        }
+        
+      }
+
+      if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
+        insert_to_add_buffer(piece_table, "\n", index);
+        index += 1;
+        position = index_to_row_col(piece_table, index);
+      }
+
+      if (event.type == SDL_TEXTINPUT) {
+        char *input_text = event.text.text;
+        insert_to_add_buffer(piece_table, input_text, index);
+        index += strlen(input_text);
+        position = index_to_row_col(piece_table, index);
+        if (position.col == cols) {
+          insert_to_add_buffer(piece_table, "\n", index);
+          index += 1;
+          position = index_to_row_col(piece_table, index);
+        }
+        printf("index: %zu, position: %d, %d\n", index, position.row, position.col), printf("cols: %d, rows: %d\n", cols, rows);
+      }
+
+   
     }
 
+    SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
     SDL_RenderClear(window.renderer);
 
-    glyph_cache_render_string(&glyph_cache, window.renderer, get_text_from_piece_table(piece_table), 0,
-                              0);
+    glyph_cache_render_string(&glyph_cache, window.renderer,
+                              get_text_from_piece_table(piece_table), 0, 0);
+
+    get_cursor(window.renderer, char_height, position.row, position.col, glyph_cache.char_width);
 
     SDL_RenderPresent(window.renderer);
   }
@@ -99,9 +139,9 @@ bool sdl_initialize(struct Window *window) {
     return true;
   }
 
-  window->window =
-      SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED,
-                       SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+  window->window = SDL_CreateWindow(
+      WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
   if (!window->window) {
     fprintf(stderr, "Error creating window: %s\n", SDL_GetError());
     return true;
@@ -114,4 +154,13 @@ bool sdl_initialize(struct Window *window) {
   }
 
   return false;
+}
+
+void get_cursor(SDL_Renderer *renderer, int char_height, size_t row, size_t col,
+                int char_width) {
+
+  // printf("get_cursor: row: %zu, col: %zu\n", row, col);
+  SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
+  SDL_Rect cursor_rect = {col * char_width, row * char_height, 5, char_height};
+  SDL_RenderFillRect(renderer, &cursor_rect);
 }

@@ -14,3 +14,5 @@ typedef struct {
 int window_init(piece_table_t *piece_table);
 void window_cleanup(struct Window *window, int exist_status);
 bool sdl_initialize(struct Window *window);
+void get_cursor(SDL_Renderer *renderer, int char_height, size_t row,
+                size_t col, int char_width);

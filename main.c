@@ -7,13 +7,13 @@ int main() {
   char *text = "Hello World";
 
   piece_table_t *piece_table = create_piece_table();
-  create_original_buffer(piece_table, text);
-  insert_to_add_buffer(piece_table, ",", 5);
-  insert_to_add_buffer(piece_table, "!", 13);
-  insert_to_add_buffer(piece_table, " ", 15);
-  insert_to_add_buffer(piece_table, "test", 20);
-  insert_to_add_buffer(piece_table, "\n", 24);
-  insert_to_add_buffer(piece_table, "new line", 25);
+  // create_original_buffer(piece_table, text);
+  // insert_to_add_buffer(piece_table, ",", 5);
+  // insert_to_add_buffer(piece_table, "!", 13);
+  // insert_to_add_buffer(piece_table, " ", 15);
+  // insert_to_add_buffer(piece_table, "test", 20);
+  // insert_to_add_buffer(piece_table, "\n", 24);
+  // insert_to_add_buffer(piece_table, "new line", 25);
 
   // delete hello
   // delete(piece_table, 0, 5);
