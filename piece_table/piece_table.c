@@ -147,7 +147,7 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
   }
 }
 
-void get_text_from_piece_table(piece_table_t *piece_table) {
+char* get_text_from_piece_table(piece_table_t *piece_table) {
   size_t new_text_length = 0;
 
   piece_t *current = piece_table->piece;
@@ -159,12 +159,12 @@ void get_text_from_piece_table(piece_table_t *piece_table) {
 
   text_buffer_t *text = malloc(sizeof(text_buffer_t));
   if (text == NULL) {
-    return;
+    exit(1);
   }
 
   char *data = malloc(sizeof(char) * new_text_length + 1);
   if (data == NULL) {
-    return;
+    exit(1);
   }
 
   free(current);
@@ -189,9 +189,7 @@ void get_text_from_piece_table(piece_table_t *piece_table) {
 
   free(curr);
 
-  printf("Data: '%s'\n", data);
-
-  return;
+  return data;
 }
 
 void delete(piece_table_t *piece_table, size_t start_index,
@@ -343,7 +341,7 @@ void get_text_range(piece_table_t *piece_table, size_t start_index,
   if (start_index > end_index) {
     return;
   }
-  
+
   piece_t *curr = piece_table->piece;
   size_t pos = 0;
 
@@ -432,6 +430,57 @@ void get_text_range(piece_table_t *piece_table, size_t start_index,
   printf("Data from i to i: '%s'\n", data);
 }
 
+Position index_to_row_col(piece_table_t *piece_table, size_t index) {
+  size_t row = 0;
+  size_t col = 0;
+  size_t last_newline_pos = -1;
+  size_t pos = 0;
+
+  piece_t *curr = piece_table->piece;
+
+  while (curr) {
+    for (size_t i = curr->offset; i < curr->length + curr->offset; i++) {
+      char letter;
+      if (curr->source == ORIGINAL) {
+        letter = piece_table->original_buffer->data[i];
+      } else {
+        letter = piece_table->add_buffer->data[i];
+      }
+
+      if (letter == '\n') {
+        if (pos == index) {
+          col = pos - last_newline_pos - 1;
+          Position p;
+          p.row = row;
+          p.col = col;
+
+          return p;
+        }
+        row++;
+        last_newline_pos = pos;
+      }
+
+      if (pos == index) {
+        col = pos - last_newline_pos - 1;
+        Position p;
+        p.row = row;
+        p.col = col;
+
+        return p;
+      }
+
+      pos++;
+    }
+
+    curr = curr->next;
+  }
+
+  // Fallback if index is at/beyond end
+  col = pos - last_newline_pos - 1;
+  Position p = {row, col};
+  return p;
+}
+
 void destroy_piece_table(piece_table_t *piece_table) {
   if (piece_table == NULL) {
     return;
@@ -455,7 +504,6 @@ void destroy_piece_table(piece_table_t *piece_table) {
   // free original buffer
   if (piece_table->original_buffer) {
     free(piece_table->original_buffer->data);
-    free(piece_table->original_buffer);
   }
 
   free(piece_table);
