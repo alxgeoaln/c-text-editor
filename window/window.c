@@ -45,16 +45,20 @@ int window_init(piece_table_t *piece_table) {
   printf("char_width: %d\n", glyph_cache.char_width);
   printf("char_height: %d\n", char_height);
   // Calculate grid dimensions
-  int cols = SCREEN_WIDTH / glyph_cache.char_width * 2;
-  int rows = SCREEN_HEIGHT / char_height;
+  //   int cols = SCREEN_WIDTH / glyph_cache.char_width * 2;
+  //   int rows = SCREEN_HEIGHT / char_height;
 
-  // Use the tool to find the actual dimensions being used
-  int actual_screen_w, actual_screen_h;
-  SDL_GetWindowSize(window.window, &actual_screen_w, &actual_screen_h);
-  printf("Actual screen: %d x %d\n", actual_screen_w, actual_screen_h);
-  printf("Grid: %d columns x %d rows\n", cols, rows);
+  int render_output_w, render_output_h;
 
-  // Set background color to white so you can see it 
+  if (SDL_GetRendererOutputSize(window.renderer, &render_output_w,
+                                &render_output_h) != 0) {
+    printf("SDL_GetRendererOutputSize Error: %s\n", SDL_GetError());
+  }
+
+  int cols = render_output_w / glyph_cache.char_width;
+  int rows = render_output_h / char_height;
+
+  // Set background color to white so you can see it
   SDL_RenderClear(window.renderer);
   SDL_RenderPresent(window.renderer);
 
@@ -68,27 +72,75 @@ int window_init(piece_table_t *piece_table) {
 
   while (running) {
     while (SDL_PollEvent(&event)) {
+      // Inside your while (SDL_PollEvent(&event)) loop:
+      if (event.type == SDL_WINDOWEVENT) {
+        if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED ||
+            event.window.event == SDL_WINDOWEVENT_MOVED ||
+            event.window.event == SDL_WINDOWEVENT_RESIZED) {
+
+          // >>>>>> FIX 2A: Close the old font metric handle <<<<<<
+          TTF_CloseFont(font);
+
+          // >>>>>> FIX 2B: Re-open the font to force new DPI measurements
+          // <<<<<<
+          font = TTF_OpenFont("assets/RobotoMono.ttf", 40);
+          if (!font) {
+            // Handle error, maybe crash or log it
+          }
+
+          // >>>>>> FIX 2C: Recalculate char_height from the new font handle
+          // <<<<<< Assuming char_height is accessible here and used in your
+          // grid calculation
+          char_height = TTF_FontHeight(font);
+
+          // 1. Re-initialize cache (using the new 'font' handle)
+          if (!glyph_cache_init(&glyph_cache, font, window.renderer,
+                                text_color)) {
+            printf("Failed to initialize glyph cache\n");
+            window_cleanup(&window, EXIT_FAILURE);
+          }
+
+          // 2. Query the NEW render output size (Your original step 2)
+          int render_output_w, render_output_h;
+          SDL_GetRendererOutputSize(window.renderer, &render_output_w,
+                                    &render_output_h);
+
+          // 3. Recalculate grid dimensions using the new metrics (Your original
+          // step 3)
+          cols = render_output_w / glyph_cache.char_width;
+          rows = render_output_h / char_height;
+        }
+      }
+
       if (event.type == SDL_QUIT) {
         running = false;
       }
 
-      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
-        running = false;
-      }
+      if (event.type == SDL_KEYDOWN) {
+        switch (event.key.keysym.sym) {
 
-      if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKSPACE) {
-        delete(piece_table, index - 1, 1);
-        if(index > 0) {
-          index -= 1;
+        case SDLK_ESCAPE:
+          running = false;
+          break;
+
+        case SDLK_BACKSPACE:
+          delete(piece_table, index - 1, 1);
+
+          if (index > 0) {
+            index -= 1;
+            position = index_to_row_col(piece_table, index);
+          }
+          break;
+
+        case SDLK_RETURN:
+          insert_to_add_buffer(piece_table, "\n", index);
+          index += 1;
           position = index_to_row_col(piece_table, index);
-        }
-        
-      }
+          break;
 
-      if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
-        insert_to_add_buffer(piece_table, "\n", index);
-        index += 1;
-        position = index_to_row_col(piece_table, index);
+        default:
+          break;
+        }
       }
 
       if (event.type == SDL_TEXTINPUT) {
@@ -96,15 +148,16 @@ int window_init(piece_table_t *piece_table) {
         insert_to_add_buffer(piece_table, input_text, index);
         index += strlen(input_text);
         position = index_to_row_col(piece_table, index);
-        if (position.col == cols) {
+
+        if (position.col >= cols) {
           insert_to_add_buffer(piece_table, "\n", index);
           index += 1;
           position = index_to_row_col(piece_table, index);
         }
-        printf("index: %zu, position: %d, %d\n", index, position.row, position.col), printf("cols: %d, rows: %d\n", cols, rows);
+        printf("index: %zu, position: %d, %d\n", index, position.row,
+               position.col),
+            printf("cols: %d, rows: %d\n", cols, rows);
       }
-
-   
     }
 
     SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
@@ -113,12 +166,12 @@ int window_init(piece_table_t *piece_table) {
     glyph_cache_render_string(&glyph_cache, window.renderer,
                               get_text_from_piece_table(piece_table), 0, 0);
 
-    get_cursor(window.renderer, char_height, position.row, position.col, glyph_cache.char_width);
+    get_cursor(window.renderer, char_height, position.row, position.col,
+               glyph_cache.char_width);
 
     SDL_RenderPresent(window.renderer);
   }
 
-  //   SDL_DestroyTexture(texture);
   TTF_CloseFont(font);
   window_cleanup(&window, EXIT_SUCCESS);
 

@@ -10,6 +10,8 @@ bool glyph_cache_init(glyph_cache_t *cache, TTF_Font *font,
     return false;
   }
 
+  glyph_cache_destroy(cache);
+
   // Initialize all textures to NULL
   memset(cache->textures, 0, sizeof(cache->textures));
   cache->initialized = false;
