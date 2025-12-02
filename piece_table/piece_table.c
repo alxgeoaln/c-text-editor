@@ -147,7 +147,7 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
   }
 }
 
-char* get_text_from_piece_table(piece_table_t *piece_table) {
+char *get_text_from_piece_table(piece_table_t *piece_table) {
   size_t new_text_length = 0;
 
   piece_t *current = piece_table->piece;
@@ -479,6 +479,48 @@ Position index_to_row_col(piece_table_t *piece_table, size_t index) {
   col = pos - last_newline_pos - 1;
   Position p = {row, col};
   return p;
+}
+
+size_t row_col_to_index(piece_table_t *piece_table, int row, int col) {
+
+  if(row == 0 && col == 0) {
+    return 0;
+  }
+
+  int curr_row = 0;
+  int curr_col = 0;
+
+  size_t pos = 0;
+
+  piece_t *curr = piece_table->piece;
+
+  while (curr) {
+    for (size_t i = curr->offset; i < curr->length + curr->offset; i++) {
+      char letter;
+      if (curr->source == ORIGINAL) {
+        letter = piece_table->original_buffer->data[i];
+      } else {
+        letter = piece_table->add_buffer->data[i];
+      }
+
+      if (letter == '\n') {
+        curr_row += 1;
+        curr_col = 0;
+      } else {
+        curr_col = curr_col + 1;
+      }
+
+      if (curr_row == row && curr_col == col) {
+        return pos + 1;
+      }
+
+      pos++;
+    }
+
+    curr = curr->next;
+  }
+
+  return 0;
 }
 
 void destroy_piece_table(piece_table_t *piece_table) {

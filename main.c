@@ -7,13 +7,14 @@ int main() {
   char *text = "Hello World";
 
   piece_table_t *piece_table = create_piece_table();
-  // create_original_buffer(piece_table, text);
-  // insert_to_add_buffer(piece_table, ",", 5);
-  // insert_to_add_buffer(piece_table, "!", 13);
-  // insert_to_add_buffer(piece_table, " ", 15);
-  // insert_to_add_buffer(piece_table, "test", 20);
-  // insert_to_add_buffer(piece_table, "\n", 24);
-  // insert_to_add_buffer(piece_table, "new line", 25);
+  create_original_buffer(piece_table, text);
+  insert_to_add_buffer(piece_table, ",", 5);
+  insert_to_add_buffer(piece_table, "!", 13);
+  insert_to_add_buffer(piece_table, " ", 15);
+  insert_to_add_buffer(piece_table, "test", 20);
+  insert_to_add_buffer(piece_table, "\n", 24);
+  insert_to_add_buffer(piece_table, "new line", 25);
+  
 
   // delete hello
   // delete(piece_table, 0, 5);
@@ -49,32 +50,49 @@ int main() {
   // get_char_at(piece_table, 17);
   // printf("char: %c \n", get_char_at(piece_table, 12));
 
-//   print_all_pieces(piece_table);
-//   get_text_range(piece_table, 0, 3);
-//   get_text_range(piece_table, 7, 9);
-//   get_text_range(piece_table, 14, 16);
-//   get_text_range(piece_table, 3, 10);
-//   get_text_range(piece_table, 9, 17);
-//   get_text_range(piece_table, 0, 26);
+  //   print_all_pieces(piece_table);
+  //   get_text_range(piece_table, 0, 3);
+  //   get_text_range(piece_table, 7, 9);
+  //   get_text_range(piece_table, 14, 16);
+  //   get_text_range(piece_table, 3, 10);
+  //   get_text_range(piece_table, 9, 17);
+  //   get_text_range(piece_table, 0, 26);
 
-//   // Row 0 tests
-//   index_to_row_col(piece_table, 0);  // 'H' → (0, 0)
-//   index_to_row_col(piece_table, 1);  // 'e' → (0, 1)
-//   index_to_row_col(piece_table, 4);  // 'o' → (0, 4)
-//   index_to_row_col(piece_table, 7);  // 'W' → (0, 7)
-//   index_to_row_col(piece_table, 14); // 't' → (0, 14)
-//   index_to_row_col(piece_table, 17); // 't' (last char of "test") → (0, 17)
-//   index_to_row_col(piece_table, 18); // '\n' → (0, 18)
+  //   // Row 0 tests
+  //   index_to_row_col(piece_table, 0);  // 'H' → (0, 0)
+  //   index_to_row_col(piece_table, 1);  // 'e' → (0, 1)
+  //   index_to_row_col(piece_table, 4);  // 'o' → (0, 4)
+  //   index_to_row_col(piece_table, 7);  // 'W' → (0, 7)
+  //   index_to_row_col(piece_table, 14); // 't' → (0, 14)
+  //   index_to_row_col(piece_table, 17); // 't' (last char of "test") → (0, 17)
+  //   index_to_row_col(piece_table, 18); // '\n' → (0, 18)
 
-//   // Row 1 tests
-//   index_to_row_col(piece_table, 19); // 'n' → (1, 0)
-//   index_to_row_col(piece_table, 20); // 'e' → (1, 1)
-//   index_to_row_col(piece_table, 21); // 'w' → (1, 2)
-//   index_to_row_col(piece_table, 22); // ' ' → (1, 3)
-//   index_to_row_col(piece_table, 26); // 'e' (last char) → (1, 7)
+  //   // Row 1 tests
+  //   index_to_row_col(piece_table, 19); // 'n' → (1, 0)
+  //   index_to_row_col(piece_table, 20); // 'e' → (1, 1)
+  //   index_to_row_col(piece_table, 21); // 'w' → (1, 2)
+  //   index_to_row_col(piece_table, 22); // ' ' → (1, 3)
+  //   index_to_row_col(piece_table, 26); // 'e' (last char) → (1, 7)
+
+  // Row 0 reverse tests
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 0));  // Expected 0
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 1));  // Expected 1
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 4));  // Expected 4
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 7));  // Expected 7
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 14)); // Expected 14
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 17)); // Expected 17
+  // printf("%zu\n", row_col_to_index(piece_table, 0, 18)); // Expected 18
+
+  // // Row 1 reverse tests
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 0)); // Expected 19
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 1)); // Expected 20
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 2)); // Expected 21
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 3)); // Expected 22
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 7)); // Expected 26
+  // printf("%zu\n", row_col_to_index(piece_table, 1, 8)); // Expected 27
 
   // get_text_range(piece_table, 2, 10);
-  //   get_text_from_piece_table(piece_table);
+    // get_text_from_piece_table(piece_table);
 
   //  printf("add_buffer: data=\"%s\", length=%lu, capacity=%lu\n",
   //            piece_table->add_buffer->data,
@@ -86,7 +104,7 @@ int main() {
   //            piece_table->original_buffer->length,
   //            piece_table->original_buffer->capacity);
 
-  window_init(piece_table);
+  // window_init(piece_table);
 
   return 0;
 }

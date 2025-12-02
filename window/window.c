@@ -35,7 +35,7 @@ int window_init(piece_table_t *piece_table) {
   int char_height = TTF_FontHeight(font);
 
   // Initialize glyph cache
-  glyph_cache_t glyph_cache;
+  glyph_cache_t glyph_cache = {0};
   if (!glyph_cache_init(&glyph_cache, font, window.renderer, text_color)) {
     printf("Failed to initialize glyph cache\n");
     TTF_CloseFont(font);
@@ -72,41 +72,29 @@ int window_init(piece_table_t *piece_table) {
 
   while (running) {
     while (SDL_PollEvent(&event)) {
-      // Inside your while (SDL_PollEvent(&event)) loop:
       if (event.type == SDL_WINDOWEVENT) {
         if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED ||
             event.window.event == SDL_WINDOWEVENT_MOVED ||
             event.window.event == SDL_WINDOWEVENT_RESIZED) {
 
-          // >>>>>> FIX 2A: Close the old font metric handle <<<<<<
           TTF_CloseFont(font);
 
-          // >>>>>> FIX 2B: Re-open the font to force new DPI measurements
-          // <<<<<<
           font = TTF_OpenFont("assets/RobotoMono.ttf", 40);
           if (!font) {
-            // Handle error, maybe crash or log it
           }
 
-          // >>>>>> FIX 2C: Recalculate char_height from the new font handle
-          // <<<<<< Assuming char_height is accessible here and used in your
-          // grid calculation
           char_height = TTF_FontHeight(font);
 
-          // 1. Re-initialize cache (using the new 'font' handle)
           if (!glyph_cache_init(&glyph_cache, font, window.renderer,
                                 text_color)) {
             printf("Failed to initialize glyph cache\n");
             window_cleanup(&window, EXIT_FAILURE);
           }
 
-          // 2. Query the NEW render output size (Your original step 2)
           int render_output_w, render_output_h;
           SDL_GetRendererOutputSize(window.renderer, &render_output_w,
                                     &render_output_h);
 
-          // 3. Recalculate grid dimensions using the new metrics (Your original
-          // step 3)
           cols = render_output_w / glyph_cache.char_width;
           rows = render_output_h / char_height;
         }
@@ -172,7 +160,6 @@ int window_init(piece_table_t *piece_table) {
     SDL_RenderPresent(window.renderer);
   }
 
-  TTF_CloseFont(font);
   window_cleanup(&window, EXIT_SUCCESS);
 
   return 0;
@@ -212,7 +199,6 @@ bool sdl_initialize(struct Window *window) {
 void get_cursor(SDL_Renderer *renderer, int char_height, size_t row, size_t col,
                 int char_width) {
 
-  // printf("get_cursor: row: %zu, col: %zu\n", row, col);
   SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
   SDL_Rect cursor_rect = {col * char_width, row * char_height, 5, char_height};
   SDL_RenderFillRect(renderer, &cursor_rect);

@@ -35,6 +35,7 @@ char get_char_at(piece_table_t *piece_table, size_t index);
 void get_text_range(piece_table_t *piece_table, size_t start_index,size_t end_index);
 void destroy_piece_table(piece_table_t *piece_table);
 Position index_to_row_col(piece_table_t *piece_table, size_t index);
+size_t row_col_to_index(piece_table_t *piece_table, int row, int col);
 
 void print_piece(piece_t *piece);
 void print_all_pieces(piece_table_t *piece_table);
