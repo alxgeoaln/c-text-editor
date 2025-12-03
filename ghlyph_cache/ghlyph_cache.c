@@ -53,8 +53,8 @@ bool glyph_cache_init(glyph_cache_t *cache, TTF_Font *font,
   }
 
   cache->initialized = true;
-  printf("Glyph cache initialized: %dx%d characters\n", cache->char_width,
-         cache->char_height);
+  // printf("Glyph cache initialized: %dx%d characters\n", cache->char_width,
+        //  cache->char_height);
   return true;
 }
 

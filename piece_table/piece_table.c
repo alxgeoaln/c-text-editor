@@ -30,6 +30,7 @@ piece_table_t *create_piece_table() {
   piece_table->piece = NULL;
   piece_table->original_buffer = NULL;
   piece_table->add_buffer = add_buffer;
+  piece_table->length = 0;
 
   return piece_table;
 }
@@ -52,6 +53,8 @@ piece_t *create_piece(source_t source, size_t length, size_t offset) {
 void create_original_buffer(piece_table_t *piece_table, char *value) {
   size_t length = strlen(value);
   size_t capacity = length + 1;
+
+  piece_table->length += length;
 
   text_buffer_t *original_buffer = malloc(sizeof(text_buffer_t));
   if (original_buffer == NULL) {
@@ -80,6 +83,8 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
                           size_t index) {
   size_t length = strlen(value);
   text_buffer_t *add_buffer = piece_table->add_buffer;
+
+  piece_table->length += length;
 
   // if the capacity is to low allocate new memory, add more capacity
   if (add_buffer->length + length + 1 > add_buffer->capacity) {
@@ -197,6 +202,8 @@ void delete(piece_table_t *piece_table, size_t start_index,
   piece_t *curr = piece_table->piece;
   piece_t *prev = NULL;
   size_t pos = 0;
+
+  piece_table->length -= delete_length;
 
   while (curr && delete_length > 0) {
     size_t piece_end = pos + curr->length;
@@ -483,7 +490,7 @@ Position index_to_row_col(piece_table_t *piece_table, size_t index) {
 
 size_t row_col_to_index(piece_table_t *piece_table, int row, int col) {
 
-  if(row == 0 && col == 0) {
+  if (row == 0 && col == 0) {
     return 0;
   }
 
@@ -504,8 +511,12 @@ size_t row_col_to_index(piece_table_t *piece_table, int row, int col) {
       }
 
       if (letter == '\n') {
-        curr_row += 1;
-        curr_col = 0;
+        if (curr_row != row) {
+          curr_row += 1;
+          curr_col = 0;
+        } else {
+          return pos;
+        }
       } else {
         curr_col = curr_col + 1;
       }
@@ -520,7 +531,116 @@ size_t row_col_to_index(piece_table_t *piece_table, int row, int col) {
     curr = curr->next;
   }
 
-  return 0;
+  return pos;
+}
+
+line_cache_t create_line_cache() {
+  size_t *start_indices = malloc(sizeof(size_t) * 0);
+  if(start_indices == NULL) {
+    printf("start_indices NULL\n");
+    exit(1);
+  }
+
+  line_cache_t line_cache = {
+    .count = 0,
+    .start_indices = start_indices
+  };
+
+  return line_cache;
+}
+
+bool update_line_cache(line_cache_t *cache, int count, size_t index) {
+    if (!cache) {
+        return false;
+    }
+    
+    int old_count = cache->count;
+    int new_total_count = cache->count + count;
+
+    size_t *temp = realloc(cache->start_indices, sizeof(size_t) * new_total_count);
+
+    if (temp == NULL) {
+        return false;
+    }
+
+    temp[old_count] = index;
+
+    cache->start_indices = temp;
+    cache->count = new_total_count;
+
+    return true;
+}
+
+void destroy_line_cache(line_cache_t *cache) {
+  if (!cache) {
+    return;
+  }
+
+  free(cache->start_indices);
+  free(cache);
+}
+
+int get_line_count(piece_table_t *piece_table, line_cache_t *line_cache) {
+  piece_t *curr = piece_table->piece;
+
+  update_line_cache(line_cache, 1, 0); // line 0 -> index 0
+
+  int line = 0;
+  size_t pos = 0;
+
+  while (curr) {
+    for (size_t i = curr->offset; i < curr->length + curr->offset; i++) {
+      char letter;
+      if (curr->source == ORIGINAL) {
+        letter = piece_table->original_buffer->data[i];
+      } else {
+        letter = piece_table->add_buffer->data[i];
+      }
+
+      if (letter == '\n') {
+        update_line_cache(line_cache, 1, pos + 1);
+        line += 1;
+      }
+
+      pos++;
+    }
+
+    curr = curr->next;
+  }
+
+  return line;
+}
+
+int get_line_length(piece_table_t *piece_table, int target_row) {
+  piece_t *curr = piece_table->piece;
+  int length = 0;
+  int row = 0;
+
+  while (curr) {
+    for (size_t i = curr->offset; i < curr->length + curr->offset; i++) {
+      char letter;
+      if (curr->source == ORIGINAL) {
+        letter = piece_table->original_buffer->data[i];
+      } else {
+        letter = piece_table->add_buffer->data[i];
+      }
+
+      if (row == target_row) {
+        // printf("letter %c\n", letter);
+        length += 1;
+      } else if (letter == '\n') {
+        if (row == target_row) {
+          return length;
+        } else {
+          row += 1;
+        }
+      }
+    }
+
+    curr = curr->next;
+  }
+
+  return length;
 }
 
 void destroy_piece_table(piece_table_t *piece_table) {

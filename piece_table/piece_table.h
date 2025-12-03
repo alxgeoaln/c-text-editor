@@ -1,9 +1,16 @@
+#include <stdbool.h>
+
 typedef enum Source { ADD, ORIGINAL } source_t;
 
 typedef struct {
   int row;
   int col;
 } Position;
+
+typedef struct {
+    size_t *start_indices; // Array holding the index of the first character of each line
+    int count;             // Total number of lines
+} line_cache_t;
 
 typedef struct Piece {
   source_t source;
@@ -22,6 +29,7 @@ typedef struct PieceTable {
   piece_t *piece;
   const text_buffer_t *original_buffer;
   text_buffer_t *add_buffer;
+  size_t length;
 } piece_table_t;
 
 piece_table_t *create_piece_table();
@@ -36,6 +44,13 @@ void get_text_range(piece_table_t *piece_table, size_t start_index,size_t end_in
 void destroy_piece_table(piece_table_t *piece_table);
 Position index_to_row_col(piece_table_t *piece_table, size_t index);
 size_t row_col_to_index(piece_table_t *piece_table, int row, int col);
+
+line_cache_t create_line_cache();
+bool update_line_cache(line_cache_t *cache, int count, size_t index);
+void destroy_line_cache(line_cache_t *cache);
+
+int get_line_count(piece_table_t *piece_table, line_cache_t *line_cache);
+int get_line_length(piece_table_t *piece_table, int target_row);
 
 void print_piece(piece_t *piece);
 void print_all_pieces(piece_table_t *piece_table);

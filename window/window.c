@@ -10,6 +10,9 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 int window_init(piece_table_t *piece_table) {
   struct Window window = {.window = NULL, .renderer = NULL};
 
@@ -44,9 +47,6 @@ int window_init(piece_table_t *piece_table) {
 
   printf("char_width: %d\n", glyph_cache.char_width);
   printf("char_height: %d\n", char_height);
-  // Calculate grid dimensions
-  //   int cols = SCREEN_WIDTH / glyph_cache.char_width * 2;
-  //   int rows = SCREEN_HEIGHT / char_height;
 
   int render_output_w, render_output_h;
 
@@ -69,6 +69,11 @@ int window_init(piece_table_t *piece_table) {
 
   size_t index = 0;
   Position position = index_to_row_col(piece_table, index);
+
+  line_cache_t line_cache = create_line_cache();
+  int lines_count = get_line_count(piece_table, &line_cache);
+
+  int target_col = -1;
 
   while (running) {
     while (SDL_PollEvent(&event)) {
@@ -123,9 +128,79 @@ int window_init(piece_table_t *piece_table) {
         case SDLK_RETURN:
           insert_to_add_buffer(piece_table, "\n", index);
           index += 1;
+          lines_count += 1;
+          if (!update_line_cache(&line_cache, 1, index)) {
+            printf("Line cache doesn't update\n");
+          }
           position = index_to_row_col(piece_table, index);
           break;
 
+        case SDLK_LEFT:
+          if (index > 0) {
+            if (target_col > -1) {
+              target_col = -1;
+            }
+
+            index -= 1;
+            position = index_to_row_col(piece_table, index);
+          }
+          break;
+
+        case SDLK_RIGHT:
+          if (index < piece_table->length) {
+            if (target_col > -1) {
+              target_col = -1;
+            }
+
+            index += 1;
+            position = index_to_row_col(piece_table, index);
+          }
+          break;
+
+        case SDLK_UP:
+          if (position.row > 0) {
+            if (target_col == -1) {
+              target_col = position.col;
+            }
+
+            size_t current_line = line_cache.start_indices[position.row];
+            size_t prev_line = line_cache.start_indices[position.row - 1];
+
+            int desired_col = MIN(target_col, current_line - prev_line - 1);
+
+            index =
+                row_col_to_index(piece_table, position.row - 1, desired_col);
+
+            position = index_to_row_col(piece_table, index);
+          }
+          break;
+
+        case SDLK_DOWN:
+          if (position.row < lines_count - 1) {
+            if (target_col == -1) {
+              target_col = position.col;
+            }
+
+            int target_row = position.row + 1;
+
+            size_t index_target_line = line_cache.start_indices[target_row];
+            size_t target_len = 0;
+
+            if (target_row < lines_count - 1) {
+              size_t next_index_target = line_cache.start_indices[target_row + 1];
+              target_len = next_index_target - index_target_line - 1;
+            } else {
+              target_len = piece_table->length - index_target_line;
+            }
+
+            int desired_col = MIN(target_col, target_len);
+
+            index =
+                row_col_to_index(piece_table, target_row, desired_col);
+
+            position = index_to_row_col(piece_table, index);
+          }
+          break;
         default:
           break;
         }
@@ -137,14 +212,16 @@ int window_init(piece_table_t *piece_table) {
         index += strlen(input_text);
         position = index_to_row_col(piece_table, index);
 
+        // printf("pt len %zu\n", piece_table->length);
+
         if (position.col >= cols) {
           insert_to_add_buffer(piece_table, "\n", index);
           index += 1;
           position = index_to_row_col(piece_table, index);
         }
-        printf("index: %zu, position: %d, %d\n", index, position.row,
-               position.col),
-            printf("cols: %d, rows: %d\n", cols, rows);
+        // printf("index: %zu, position: %d, %d\n", index, position.row,
+        //        position.col),
+        //     printf("cols: %d, rows: %d\n", cols, rows);
       }
     }
 
@@ -165,11 +242,13 @@ int window_init(piece_table_t *piece_table) {
   return 0;
 }
 
-void window_cleanup(struct Window *window, int exit_status) {
+void window_cleanup(struct Window *window, piece_table_t *piece_table, line_cache_t *line_cache, int exit_status) {
   SDL_DestroyRenderer(window->renderer);
   SDL_DestroyWindow(window->window);
   SDL_Quit();
   TTF_Quit();
+  destroy_piece_table(piece_table);
+  destroy_line_cache(line_cache);
   exit(exit_status);
 }
 
