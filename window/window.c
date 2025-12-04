@@ -79,6 +79,8 @@ int window_init(piece_table_t *piece_table) {
 
   int target_col = -1;
 
+  int scroll_offset_row = 0;
+
   while (running) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_WINDOWEVENT) {
@@ -121,11 +123,12 @@ int window_init(piece_table_t *piece_table) {
           break;
 
         case SDLK_BACKSPACE:
-          delete(piece_table, index - 1, 1);
-
           if (index > 0) {
+            delete(piece_table, index - 1, 1);
             index -= 1;
             position = index_to_row_col(piece_table, index);
+
+            get_line_count(piece_table, &line_cache);
           }
           break;
 
@@ -234,13 +237,20 @@ int window_init(piece_table_t *piece_table) {
       }
     }
 
+    // Adjust scroll view if cursor moves out of visible bounds
+    if (position.row < scroll_offset_row) {
+      scroll_offset_row = position.row;
+    } else if (position.row >= scroll_offset_row + rows) {
+      scroll_offset_row = position.row - rows + 1;
+    }
+
     SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
     SDL_RenderClear(window.renderer);
 
     glyph_cache_render_string(&glyph_cache, window.renderer,
-                              get_text_from_piece_table(piece_table), 0, 0);
+                              get_text_from_piece_table(piece_table), 0, -scroll_offset_row);
 
-    get_cursor(window.renderer, char_height, position.row, position.col,
+    get_cursor(window.renderer, char_height, position.row - scroll_offset_row, position.col,
                glyph_cache.char_width);
 
     SDL_RenderPresent(window.renderer);
