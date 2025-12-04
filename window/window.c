@@ -16,8 +16,10 @@
 int window_init(piece_table_t *piece_table) {
   struct Window window = {.window = NULL, .renderer = NULL};
 
+  line_cache_t line_cache = create_line_cache();
+
   if (sdl_initialize(&window)) {
-    window_cleanup(&window, EXIT_FAILURE);
+    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
   }
 
   SDL_Color text_color = {0, 0, 0, 255};
@@ -25,14 +27,14 @@ int window_init(piece_table_t *piece_table) {
   // Initialize TTF
   if (TTF_Init() == -1) {
     printf("TTF_Init Error: %s\n", TTF_GetError());
-    window_cleanup(&window, EXIT_FAILURE);
+    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
   }
 
   // Handle font
   TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf", 40);
   if (!font) {
     printf("TTF_OpenFont Error: %s\n", TTF_GetError());
-    window_cleanup(&window, EXIT_FAILURE);
+    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
   }
 
   int char_height = TTF_FontHeight(font);
@@ -42,7 +44,7 @@ int window_init(piece_table_t *piece_table) {
   if (!glyph_cache_init(&glyph_cache, font, window.renderer, text_color)) {
     printf("Failed to initialize glyph cache\n");
     TTF_CloseFont(font);
-    window_cleanup(&window, EXIT_FAILURE);
+    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
   }
 
   printf("char_width: %d\n", glyph_cache.char_width);
@@ -70,7 +72,6 @@ int window_init(piece_table_t *piece_table) {
   size_t index = 0;
   Position position = index_to_row_col(piece_table, index);
 
-  line_cache_t line_cache = create_line_cache();
   int lines_count = get_line_count(piece_table, &line_cache);
 
   int target_col = -1;
@@ -93,7 +94,7 @@ int window_init(piece_table_t *piece_table) {
           if (!glyph_cache_init(&glyph_cache, font, window.renderer,
                                 text_color)) {
             printf("Failed to initialize glyph cache\n");
-            window_cleanup(&window, EXIT_FAILURE);
+            window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
           }
 
           int render_output_w, render_output_h;
@@ -132,6 +133,7 @@ int window_init(piece_table_t *piece_table) {
           if (!update_line_cache(&line_cache, 1, index)) {
             printf("Line cache doesn't update\n");
           }
+
           position = index_to_row_col(piece_table, index);
           break;
 
@@ -176,7 +178,7 @@ int window_init(piece_table_t *piece_table) {
           break;
 
         case SDLK_DOWN:
-          if (position.row < lines_count - 1) {
+          if (position.row < lines_count) {
             if (target_col == -1) {
               target_col = position.col;
             }
@@ -186,8 +188,9 @@ int window_init(piece_table_t *piece_table) {
             size_t index_target_line = line_cache.start_indices[target_row];
             size_t target_len = 0;
 
-            if (target_row < lines_count - 1) {
-              size_t next_index_target = line_cache.start_indices[target_row + 1];
+            if (target_row < lines_count) {
+              size_t next_index_target =
+                  line_cache.start_indices[target_row + 1];
               target_len = next_index_target - index_target_line - 1;
             } else {
               target_len = piece_table->length - index_target_line;
@@ -195,8 +198,7 @@ int window_init(piece_table_t *piece_table) {
 
             int desired_col = MIN(target_col, target_len);
 
-            index =
-                row_col_to_index(piece_table, target_row, desired_col);
+            index = row_col_to_index(piece_table, target_row, desired_col);
 
             position = index_to_row_col(piece_table, index);
           }
@@ -237,12 +239,13 @@ int window_init(piece_table_t *piece_table) {
     SDL_RenderPresent(window.renderer);
   }
 
-  window_cleanup(&window, EXIT_SUCCESS);
+  window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
 
   return 0;
 }
 
-void window_cleanup(struct Window *window, piece_table_t *piece_table, line_cache_t *line_cache, int exit_status) {
+void window_cleanup(struct Window *window, piece_table_t *piece_table,
+                    line_cache_t *line_cache, int exit_status) {
   SDL_DestroyRenderer(window->renderer);
   SDL_DestroyWindow(window->window);
   SDL_Quit();
