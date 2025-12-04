@@ -13,7 +13,7 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-int font_px = 300;
+int font_px = 20; // Logical pixel height (what you see on screen)
 
 int window_init(piece_table_t *piece_table) {
   struct Window window = {.window = NULL, .renderer = NULL};
@@ -32,9 +32,9 @@ int window_init(piece_table_t *piece_table) {
     window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
   }
 
-  
   // Handle font
-  TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf", calculate_point_size(font_px, window.window));
+  TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf",
+                                calculate_point_size(font_px, window.window));
   if (!font) {
     printf("TTF_OpenFont Error: %s\n", TTF_GetError());
     window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
@@ -90,7 +90,8 @@ int window_init(piece_table_t *piece_table) {
 
           TTF_CloseFont(font);
 
-          font = TTF_OpenFont("assets/RobotoMono.ttf", calculate_point_size(font_px, window.window));
+          font = TTF_OpenFont("assets/RobotoMono.ttf",
+                              calculate_point_size(font_px, window.window));
           if (!font) {
           }
 
@@ -180,13 +181,10 @@ int window_init(piece_table_t *piece_table) {
                 row_col_to_index(piece_table, position.row - 1, desired_col);
 
             position = index_to_row_col(piece_table, index);
-
           }
           break;
 
         case SDLK_DOWN:
-          printf("lines_count: %d\n", lines_count);
-          printf("position.row: %d\n", position.row);
           if (position.row < lines_count) {
             if (target_col == -1) {
               target_col = position.col;
@@ -212,6 +210,15 @@ int window_init(piece_table_t *piece_table) {
             position = index_to_row_col(piece_table, index);
           }
           break;
+
+        case SDLK_TAB: {
+          char *tab_string = "    ";
+          size_t tab_length = strlen(tab_string);
+          insert_to_add_buffer(piece_table, tab_string, index);
+          index += tab_length;
+          position = index_to_row_col(piece_table, index);
+          break;
+        }
         default:
           break;
         }
@@ -222,8 +229,6 @@ int window_init(piece_table_t *piece_table) {
         insert_to_add_buffer(piece_table, input_text, index);
         index += strlen(input_text);
         position = index_to_row_col(piece_table, index);
-
-        // printf("pt len %zu\n", piece_table->length);
 
         if (position.col >= cols) {
           insert_to_add_buffer(piece_table, "\n", index);
@@ -248,10 +253,11 @@ int window_init(piece_table_t *piece_table) {
     SDL_RenderClear(window.renderer);
 
     glyph_cache_render_string(&glyph_cache, window.renderer,
-                              get_text_from_piece_table(piece_table), 0, -scroll_offset_row);
+                              get_text_from_piece_table(piece_table), 0,
+                              -scroll_offset_row);
 
-    get_cursor(window.renderer, char_height, position.row - scroll_offset_row, position.col,
-               glyph_cache.char_width);
+    get_cursor(window.renderer, char_height, position.row - scroll_offset_row,
+               position.col, glyph_cache.char_width);
 
     SDL_RenderPresent(window.renderer);
   }
@@ -268,8 +274,8 @@ void window_cleanup(struct Window *window, piece_table_t *piece_table,
   SDL_Quit();
   TTF_Quit();
   destroy_piece_table(piece_table);
-  if(line_cache->start_indices != NULL) {
-      destroy_line_cache(line_cache);
+  if (line_cache->start_indices != NULL) {
+    destroy_line_cache(line_cache);
   }
   exit(exit_status);
 }
@@ -305,30 +311,33 @@ void get_cursor(SDL_Renderer *renderer, int char_height, size_t row, size_t col,
   SDL_RenderFillRect(renderer, &cursor_rect);
 }
 
+// Function to calculate the required point size for consistent rendering
+// target_pixel_height: desired height in LOGICAL pixels (what you see on
+// screen)
+int calculate_point_size(int target_pixel_height, SDL_Window *window) {
+  // Get the window size (logical pixels)
+  int window_w, window_h;
+  SDL_GetWindowSize(window, &window_w, &window_h);
 
-// Function to calculate the required point size
-  int calculate_point_size(int target_pixel_height, SDL_Window *window) {
-    float dpi_diagonal, dpi_horizontal, dpi_vertical;
+  // Get the renderer output size (physical pixels)
+  SDL_Renderer *renderer = SDL_GetRenderer(window);
+  int render_w, render_h;
+  if (renderer &&
+      SDL_GetRendererOutputSize(renderer, &render_w, &render_h) == 0) {
+    // Calculate the scale factor (e.g., 2.0 on Retina)
+    float scale = (float)render_h / (float)window_h;
 
-    // Get the index of the display the window is currently on
-    int display_index = SDL_GetWindowDisplayIndex(window);
-    printf("display_index %i \n", display_index);
+    // Scale the target pixel height to physical pixels
+    int physical_pixels = (int)(target_pixel_height * scale + 0.5f);
 
-    // Get the DPI for that display
-    if (SDL_GetDisplayDPI(display_index, &dpi_diagonal, &dpi_horizontal,
-                          &dpi_vertical) != 0) {
-      // Fallback to a standard DPI if reading fails (e.g., 96 or 72)
-      // Note: For macOS High-DPI, SDL often reports the logical DPI (e.g., 72
-      // or 96) even though rendering is scaled 2x, which is why TTF_OpenFont
-      // works. It's often safer to use a fallback or the horizontal/vertical
-      // DPI.
-      dpi_vertical = 96.0f;
-    }
-
-    // Convert to points. We use the vertical DPI for font height.
-    // The result should be rounded to the nearest integer.
-    int point_size = (int)((target_pixel_height * 72.0f) / dpi_vertical + 0.5f);
-
-    // Ensure minimum size (e.g., 8pt)
-    return (point_size > 8) ? point_size : 8;
+    // TTF_OpenFont expects points. At 72 DPI, 1pt = 1px.
+    // SDL_ttf on macOS with high-DPI renders at the physical resolution,
+    // so we pass the physical pixel size directly as the point size.
+    return (physical_pixels > 8) ? physical_pixels : 8;
   }
+
+  // Fallback: just use the target as-is
+  printf("Fallback: using target_pixel_height directly: %d\n",
+         target_pixel_height);
+  return (target_pixel_height > 8) ? target_pixel_height : 8;
+}
