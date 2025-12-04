@@ -79,124 +79,6 @@ void create_original_buffer(piece_table_t *piece_table, char *value) {
   piece_table->piece = piece;
 }
 
-void insert_to_add_buffer(piece_table_t *piece_table, char *value,
-                          size_t index) {
-  size_t length = strlen(value);
-  text_buffer_t *add_buffer = piece_table->add_buffer;
-
-  piece_table->length += length;
-
-  // if the capacity is to low allocate new memory, add more capacity
-  if (add_buffer->length + length + 1 > add_buffer->capacity) {
-    size_t new_capacity = (add_buffer->length + length + 1) * 2;
-    char *new_data = realloc(add_buffer->data, new_capacity);
-    if (!new_data)
-      return;
-    add_buffer->data = new_data;
-    add_buffer->capacity = new_capacity;
-  }
-
-  // add the new value to ->data buffer
-  memcpy(add_buffer->data + add_buffer->length, value, length);
-  add_buffer->length += length;
-  add_buffer->data[add_buffer->length] = '\0';
-
-  // create a new ADD piece
-  piece_t *add_piece = create_piece(ADD, length, add_buffer->length - length);
-
-  piece_t *curr = piece_table->piece;
-  piece_t *prev = NULL;
-  size_t pos = 0;
-
-  while (curr && pos + curr->length <= index) {
-    pos += curr->length;
-    prev = curr;
-    curr = curr->next;
-  }
-
-  if (curr && pos < index) {
-    // in case the new char is in middle of piece
-    size_t split_offset = index - pos;
-    size_t first_len = split_offset;
-    size_t second_len = curr->length - split_offset;
-
-    piece_t *first_piece = create_piece(curr->source, first_len, curr->offset);
-    piece_t *second_piece =
-        create_piece(curr->source, second_len, curr->offset + first_len);
-
-    if (!first_piece || !second_piece) {
-      free(first_piece);
-      free(second_piece);
-      free(add_piece);
-      return;
-    }
-
-    first_piece->next = add_piece;
-    add_piece->next = second_piece;
-    second_piece->next = curr->next;
-
-    if (prev) {
-      prev->next = first_piece;
-    } else {
-      piece_table->piece = first_piece;
-    }
-
-    free(curr);
-  } else {
-    add_piece->next = curr;
-    if (prev) {
-      prev->next = add_piece;
-    } else {
-      piece_table->piece = add_piece;
-    }
-  }
-}
-
-char *get_text_from_piece_table(piece_table_t *piece_table) {
-  size_t new_text_length = 0;
-
-  piece_t *current = piece_table->piece;
-
-  while (current) {
-    new_text_length += current->length;
-    current = current->next;
-  }
-
-  text_buffer_t *text = malloc(sizeof(text_buffer_t));
-  if (text == NULL) {
-    exit(1);
-  }
-
-  char *data = malloc(sizeof(char) * new_text_length + 1);
-  if (data == NULL) {
-    exit(1);
-  }
-
-  free(current);
-
-  piece_t *curr = piece_table->piece;
-
-  size_t acc = 0;
-  while (curr) {
-    size_t start = curr->offset;
-    size_t end = curr->offset + curr->length;
-    size_t length = end - start;
-
-    if (curr->source == ORIGINAL) {
-      memcpy(data + acc, piece_table->original_buffer->data + start, length);
-    } else {
-      memcpy(data + acc, piece_table->add_buffer->data + start, length);
-    }
-
-    acc += length;
-    curr = curr->next;
-  }
-
-  free(curr);
-
-  return data;
-}
-
 void delete(piece_table_t *piece_table, size_t start_index,
             size_t delete_length) {
   piece_t *curr = piece_table->piece;
@@ -320,6 +202,125 @@ void delete(piece_table_t *piece_table, size_t start_index,
     curr = curr->next;
   }
 }
+
+void insert_to_add_buffer(piece_table_t *piece_table, char *value,
+                          size_t index) {
+  size_t length = strlen(value);
+  text_buffer_t *add_buffer = piece_table->add_buffer;
+
+  piece_table->length += length;
+
+  // if the capacity is to low allocate new memory, add more capacity
+  if (add_buffer->length + length + 1 > add_buffer->capacity) {
+    size_t new_capacity = (add_buffer->length + length + 1) * 2;
+    char *new_data = realloc(add_buffer->data, new_capacity);
+    if (!new_data)
+      return;
+    add_buffer->data = new_data;
+    add_buffer->capacity = new_capacity;
+  }
+
+  // add the new value to ->data buffer
+  memcpy(add_buffer->data + add_buffer->length, value, length);
+  add_buffer->length += length;
+  add_buffer->data[add_buffer->length] = '\0';
+
+  // create a new ADD piece
+  piece_t *add_piece = create_piece(ADD, length, add_buffer->length - length);
+
+  piece_t *curr = piece_table->piece;
+  piece_t *prev = NULL;
+  size_t pos = 0;
+
+  while (curr && pos + curr->length <= index) {
+    pos += curr->length;
+    prev = curr;
+    curr = curr->next;
+  }
+
+  if (curr && pos < index) {
+    // in case the new char is in middle of piece
+    size_t split_offset = index - pos;
+    size_t first_len = split_offset;
+    size_t second_len = curr->length - split_offset;
+
+    piece_t *first_piece = create_piece(curr->source, first_len, curr->offset);
+    piece_t *second_piece =
+        create_piece(curr->source, second_len, curr->offset + first_len);
+
+    if (!first_piece || !second_piece) {
+      free(first_piece);
+      free(second_piece);
+      free(add_piece);
+      return;
+    }
+
+    first_piece->next = add_piece;
+    add_piece->next = second_piece;
+    second_piece->next = curr->next;
+
+    if (prev) {
+      prev->next = first_piece;
+    } else {
+      piece_table->piece = first_piece;
+    }
+
+    free(curr);
+  } else {
+    add_piece->next = curr;
+    if (prev) {
+      prev->next = add_piece;
+    } else {
+      piece_table->piece = add_piece;
+    }
+  }
+}
+
+char *get_text_from_piece_table(piece_table_t *piece_table) {
+  size_t new_text_length = 0;
+
+  piece_t *current = piece_table->piece;
+
+  while (current) {
+    new_text_length += current->length;
+    current = current->next;
+  }
+
+  text_buffer_t *text = malloc(sizeof(text_buffer_t));
+  if (text == NULL) {
+    exit(1);
+  }
+
+  char *data = malloc(sizeof(char) * new_text_length + 1);
+  if (data == NULL) {
+    exit(1);
+  }
+
+  free(current);
+
+  piece_t *curr = piece_table->piece;
+
+  size_t acc = 0;
+  while (curr) {
+    size_t start = curr->offset;
+    size_t end = curr->offset + curr->length;
+    size_t length = end - start;
+
+    if (curr->source == ORIGINAL) {
+      memcpy(data + acc, piece_table->original_buffer->data + start, length);
+    } else {
+      memcpy(data + acc, piece_table->add_buffer->data + start, length);
+    }
+
+    acc += length;
+    curr = curr->next;
+  }
+
+  free(curr);
+
+  return data;
+}
+
 
 char get_char_at(piece_table_t *piece_table, size_t index) {
   piece_t *curr = piece_table->piece;
