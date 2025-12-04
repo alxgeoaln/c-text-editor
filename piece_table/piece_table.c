@@ -577,7 +577,8 @@ void destroy_line_cache(line_cache_t *cache) {
   }
 
   free(cache->start_indices);
-  free(cache);
+  cache->start_indices = NULL;
+  // free(cache); // Do not free the struct itself if it was allocated on the stack
 }
 
 int get_line_count(piece_table_t *piece_table, line_cache_t *line_cache) {
