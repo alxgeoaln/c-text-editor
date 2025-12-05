@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "command/command.h"
 #include "piece_table/piece_table.h"
 #include "window/window.h"
 
@@ -7,6 +8,9 @@ int main() {
   char *text = "Hello World";
 
   piece_table_t *piece_table = create_piece_table();
+  command_t command_obj = create_command_object();
+
+
   // create_original_buffer(piece_table, text);
   // insert_to_add_buffer(piece_table, ",", 5);
   // insert_to_add_buffer(piece_table, "!", 13);
@@ -104,8 +108,7 @@ int main() {
   //            piece_table->original_buffer->capacity);
 
   // printf("get line count %i \n", get_line_count(piece_table));
-
-  window_init(piece_table);
+  window_init(piece_table, &command_obj);
 
   return 0;
 }

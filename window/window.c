@@ -4,6 +4,7 @@
 
 #include "../ghlyph_cache/ghlyph_cache.h"
 #include "../piece_table/piece_table.h"
+#include "../command/command.h"
 #include "window.h"
 
 #define WINDOW_TITLE "Text editor"
@@ -15,7 +16,7 @@
 
 int font_px = 20; // Logical pixel height (what you see on screen)
 
-int window_init(piece_table_t *piece_table) {
+int window_init(piece_table_t *piece_table, command_t *command_obj) {
   struct Window window = {.window = NULL, .renderer = NULL};
 
   line_cache_t line_cache = create_line_cache();
@@ -126,6 +127,7 @@ int window_init(piece_table_t *piece_table) {
         case SDLK_BACKSPACE:
           if (index > 0) {
             delete(piece_table, index - 1, 1);
+            create_delete_command(command_obj, DELETE, index - 1, 1);
             index -= 1;
             position = index_to_row_col(piece_table, index);
 
@@ -135,6 +137,7 @@ int window_init(piece_table_t *piece_table) {
 
         case SDLK_RETURN:
           insert_to_add_buffer(piece_table, "\n", index);
+          create_insert_command(command_obj, INSERT, "\n", index);
           index += 1;
           lines_count += 1;
           if (!update_line_cache(&line_cache, 1, index)) {
@@ -215,6 +218,7 @@ int window_init(piece_table_t *piece_table) {
           char *tab_string = "    ";
           size_t tab_length = strlen(tab_string);
           insert_to_add_buffer(piece_table, tab_string, index);
+          create_insert_command(command_obj, INSERT, tab_string, index);
           index += tab_length;
           position = index_to_row_col(piece_table, index);
           break;
@@ -227,11 +231,13 @@ int window_init(piece_table_t *piece_table) {
       if (event.type == SDL_TEXTINPUT) {
         char *input_text = event.text.text;
         insert_to_add_buffer(piece_table, input_text, index);
+        create_insert_command(command_obj, INSERT, input_text, index);
         index += strlen(input_text);
         position = index_to_row_col(piece_table, index);
 
         if (position.col >= cols) {
           insert_to_add_buffer(piece_table, "\n", index);
+          create_insert_command(command_obj, INSERT, "\n", index);
           index += 1;
           lines_count += 1;
           if (!update_line_cache(&line_cache, 1, index)) {

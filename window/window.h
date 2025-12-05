@@ -11,7 +11,7 @@ typedef struct {
   SDL_Rect rect;
 } letter_t;
 
-int window_init(piece_table_t *piece_table);
+int window_init(piece_table_t *piece_table, command_t *command_obj);
 void window_cleanup(struct Window *window, piece_table_t *piece_table, line_cache_t *line_cache, int exit_status);
 
 bool sdl_initialize(struct Window *window);
