@@ -109,28 +109,6 @@ void undo(command_t *command_obj, piece_table_t *piece_table, size_t *cursor_ind
   command_obj->index -= 1;
 }
 
-// TODO: to be tested
-void redo(command_t *command_obj, piece_table_t *piece_table, size_t *cursor_index) {
-  int index = command_obj->index;
-
-  if (index >= command_obj->count - 1) {
-    return;
-  }
-
-  command_action_t history = command_obj->history[index];
-
-  if (history.insert_cmd.type == INSERT) {
-    insert_to_add_buffer(piece_table, history.insert_cmd.value,
-                         history.insert_cmd.index);
-    *cursor_index = history.insert_cmd.index;
-  } else {
-    delete(piece_table, history.delete_cmd.start_index, history.delete_cmd.delete_length);
-    *cursor_index = history.delete_cmd.start_index;
-  }
-
-  command_obj->index += 1;
-}
-  
 void destroy_command(command_t *command_obj) {
 
   for (size_t i = 0; i < command_obj->count; i++) {

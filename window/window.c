@@ -14,7 +14,7 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-int font_px = 20; // Logical pixel height (what you see on screen)
+int font_px = 20; 
 
 int window_init(piece_table_t *piece_table, command_t *command_obj) {
   struct Window window = {.window = NULL, .renderer = NULL};
@@ -22,33 +22,30 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
   line_cache_t line_cache = create_line_cache();
 
   if (sdl_initialize(&window)) {
-    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+    window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
   }
 
   SDL_Color text_color = {0, 0, 0, 255};
 
-  // Initialize TTF
   if (TTF_Init() == -1) {
     printf("TTF_Init Error: %s\n", TTF_GetError());
-    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+    window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
   }
 
-  // Handle font
   TTF_Font *font = TTF_OpenFont("assets/RobotoMono.ttf",
                                 calculate_point_size(font_px, window.window));
   if (!font) {
     printf("TTF_OpenFont Error: %s\n", TTF_GetError());
-    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+    window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
   }
 
   int char_height = TTF_FontHeight(font);
 
-  // Initialize glyph cache
   glyph_cache_t glyph_cache = {0};
   if (!glyph_cache_init(&glyph_cache, font, window.renderer, text_color)) {
     printf("Failed to initialize glyph cache\n");
     TTF_CloseFont(font);
-    window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+    window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
   }
 
   printf("char_width: %d\n", glyph_cache.char_width);
@@ -64,11 +61,9 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
   int cols = render_output_w / glyph_cache.char_width;
   int rows = render_output_h / char_height;
 
-  // Set background color to white so you can see it
   SDL_RenderClear(window.renderer);
   SDL_RenderPresent(window.renderer);
 
-  // Event loop - keep window open until user closes it
   bool running = true;
   SDL_Event event;
   SDL_StartTextInput();
@@ -101,7 +96,7 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
           if (!glyph_cache_init(&glyph_cache, font, window.renderer,
                                 text_color)) {
             printf("Failed to initialize glyph cache\n");
-            window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+            window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
           }
 
           int render_output_w, render_output_h;
@@ -279,18 +274,19 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
     SDL_RenderPresent(window.renderer);
   }
 
-  window_cleanup(&window, piece_table, &line_cache, EXIT_SUCCESS);
+  window_cleanup(&window, piece_table, &line_cache, command_obj, EXIT_SUCCESS);
 
   return 0;
 }
 
 void window_cleanup(struct Window *window, piece_table_t *piece_table,
-                    line_cache_t *line_cache, int exit_status) {
+                    line_cache_t *line_cache, command_t *command_obj, int exit_status) {
   SDL_DestroyRenderer(window->renderer);
   SDL_DestroyWindow(window->window);
   SDL_Quit();
   TTF_Quit();
   destroy_piece_table(piece_table);
+  destroy_command(command_obj);
   if (line_cache->start_indices != NULL) {
     destroy_line_cache(line_cache);
   }

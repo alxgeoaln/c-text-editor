@@ -36,7 +36,5 @@ void create_delete_command(command_t *command_obj, command_action_type_t action,
 
 
 void undo(command_t *command_obj, piece_table_t *piece_table, size_t *cursor_index);
-void redo(command_t *command_obj, piece_table_t *piece_table, size_t *cursor_index);
-
 void destroy_command(command_t *command_obj);
 
