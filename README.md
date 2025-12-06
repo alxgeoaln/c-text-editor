@@ -8,8 +8,10 @@ This project was developed to practice the C language.
 
 ## Technical Implementation
 
-* Piece Table
-* Command Design Pattern
+* Data structures for storing the text: piece table.
+* Behavior and implementation of the text cursor.
+* Design pattern for undo: command.
+* Abstractions to separate the visual and memory aspects of the text.
 
 ### Compilation
 
