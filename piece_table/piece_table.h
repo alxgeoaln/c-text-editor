@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdbool.h>
 
 typedef enum Source { ADD, ORIGINAL } source_t;
@@ -8,8 +10,8 @@ typedef struct {
 } Position;
 
 typedef struct {
-    size_t *start_indices; // Array holding the index of the first character of each line
-    int count;             // Total number of lines
+    size_t *start_indices; 
+    int count;            
 } line_cache_t;
 
 typedef struct Piece {
@@ -40,7 +42,7 @@ void insert_to_add_buffer(piece_table_t *piece_table, char *value,
 char* get_text_from_piece_table(piece_table_t *piece_table);
 void delete(piece_table_t *pice_table, size_t start_index, size_t length);
 char get_char_at(piece_table_t *piece_table, size_t index);
-void get_text_range(piece_table_t *piece_table, size_t start_index,size_t end_index);
+char* get_text_range(piece_table_t *piece_table, size_t start_index,size_t end_index);
 void destroy_piece_table(piece_table_t *piece_table);
 Position index_to_row_col(piece_table_t *piece_table, size_t index);
 size_t row_col_to_index(piece_table_t *piece_table, int row, int col);

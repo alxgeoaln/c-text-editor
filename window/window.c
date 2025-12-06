@@ -2,9 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "../command/command.h"
 #include "../ghlyph_cache/ghlyph_cache.h"
 #include "../piece_table/piece_table.h"
-#include "../command/command.h"
 #include "window.h"
 
 #define WINDOW_TITLE "Text editor"
@@ -119,6 +119,15 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
 
       if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
+        case SDLK_z:
+           if (event.key.keysym.mod & KMOD_GUI ||
+                     event.key.keysym.mod & KMOD_CTRL) {
+            undo(command_obj, piece_table, &index);
+
+            position = index_to_row_col(piece_table, index);
+            lines_count = get_line_count(piece_table, &line_cache);
+          }
+          break;
 
         case SDLK_ESCAPE:
           running = false;
@@ -126,12 +135,14 @@ int window_init(piece_table_t *piece_table, command_t *command_obj) {
 
         case SDLK_BACKSPACE:
           if (index > 0) {
+            char *deleted_text = get_text_range(piece_table, index - 1, index);
+            create_delete_command(command_obj, DELETE, index - 1, 1,
+                                  deleted_text);
             delete(piece_table, index - 1, 1);
-            create_delete_command(command_obj, DELETE, index - 1, 1);
             index -= 1;
             position = index_to_row_col(piece_table, index);
 
-            get_line_count(piece_table, &line_cache);
+            lines_count = get_line_count(piece_table, &line_cache);
           }
           break;
 

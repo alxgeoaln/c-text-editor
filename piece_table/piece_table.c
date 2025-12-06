@@ -343,11 +343,11 @@ char get_char_at(piece_table_t *piece_table, size_t index) {
   }
 }
 
-void get_text_range(piece_table_t *piece_table, size_t start_index,
+char* get_text_range(piece_table_t *piece_table, size_t start_index,
                     size_t end_index) {
 
   if (start_index > end_index) {
-    return;
+    return "";
   }
 
   piece_t *curr = piece_table->piece;
@@ -357,12 +357,12 @@ void get_text_range(piece_table_t *piece_table, size_t start_index,
 
   text_buffer_t *text = malloc(sizeof(text_buffer_t));
   if (text == NULL) {
-    return;
+    return "";
   }
 
   char *data = malloc(sizeof(char) * length + 1);
   if (data == NULL) {
-    return;
+    return "";
   }
 
   size_t multi_piece_offset = 0;
@@ -436,6 +436,7 @@ void get_text_range(piece_table_t *piece_table, size_t start_index,
   }
 
   printf("Data from i to i: '%s'\n", data);
+  return data;
 }
 
 Position index_to_row_col(piece_table_t *piece_table, size_t index) {
